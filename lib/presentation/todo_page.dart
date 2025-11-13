@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todo/application/todo_list.dart';
@@ -60,35 +59,23 @@ class _TodoPageState extends ConsumerState<TodoPage> {
             ),
           ),
           Expanded(
-            child: todos.isEmpty
-                ? const _EmptyView()
-                : ListView.separated(
-                    itemBuilder: (_, i) {
-                      final Todo t = todos[i];
-                      return ListTile(
-                        leading: Checkbox(
-                          value: t.done,
-                          onChanged: (_) =>
-                              ref.read(todoListProvider.notifier).toggle(t.id),
-                        ),
-                        title: Text(
-                          t.title,
-                          style: TextStyle(
-                            decoration: t.done
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                        trailing: IconButton(
-                          onPressed: () =>
-                              ref.read(todoListProvider.notifier).remove(t.id),
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemCount: todos.length,
-                  ),
+            child: switch (todos) {
+              AsyncData(:final value) when value.isEmpty => const _EmptyView(),
+              AsyncData(:final value) => ListView.separated(
+                itemBuilder: (_, i) {
+                  final t = value[i];
+                  return ListTile(
+                    leading: Checkbox(
+                      value: t.done,
+                      onChanged: (_) =>
+                          ref.read(todoListProvider.notifier).toggle(t.id),
+                    ),
+                  );
+                },
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemCount: value.length,
+              ),
+            },
           ),
         ],
       ),

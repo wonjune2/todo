@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:todo/data/app_database.dart';
 import 'package:todo/presentation/todo_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final database = AppDatabase();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

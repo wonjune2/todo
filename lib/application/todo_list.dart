@@ -1,36 +1,51 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:todo/domain/todo.dart';
+import 'package:todo/data/app_database.dart';
+import 'package:todo/data/todo_repository.dart';
 
-final todoListProvider = NotifierProvider<TodoList, List<Todo>>(TodoList.new);
+final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
+final todoRepoProvider = Provider<TodoRepository>(
+  (ref) => TodoRepository(ref.read(databaseProvider)),
+);
 
-class TodoList extends Notifier<List<Todo>> {
+final todoListProvider = AsyncNotifierProvider<TodoList, List<Todo>>(
+  TodoList.new,
+);
+
+class TodoList extends AsyncNotifier<List<Todo>> {
   @override
-  List<Todo> build() {
-    return const <Todo>[];
+  Future<List<Todo>> build() async {
+    // 초기 값: 현재 DB 스냅샷
+    final repo = ref.read(todoRepoProvider);
+    // DB 변경을 실시간 반영
+    ref.onDispose(() {}); // 필요 시 정리
+    repo.watchAll().listen((rows) {
+      state = AsyncData(rows);
+    });
+
+    return repo.db.getAll();
   }
 
-  void add(String title) {
+  Future<void> add(String title) async {
     final t = title.trim();
     if (t.isEmpty) return;
-    final id =
-        '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1000)}';
-    state = [...state, Todo(id: id, title: t)];
+    await ref.read(todoRepoProvider).insertTodo(t);
   }
 
-  void toggle(String id) {
-    state = [
-      for (final todo in state)
-        if (todo.id == id) todo.copyWith(done: !todo.done) else todo,
-    ];
+  Future<void> toggle(int id) async {
+    final current = state.value ?? [];
+    final row = current.firstWhere((e) => e.id == id);
+    await ref.read(todoRepoProvider).toggle(id, !row.done);
   }
 
-  void remove(String id) {
-    state = state.where((e) => e.id != id).toList();
+  Future<void> remove(int id) async {
+    await ref.read(todoRepoProvider).remove(id);
+    // state = state.where((e) => e.id != id).toList();
   }
 
-  void cleanDone() {
-    state = state.where((e) => !e.done).toList();
+  Future<void> cleanDone() async {
+    await ref.read(todoRepoProvider).clearDone();
+    //state = state.where((e) => !e.done).toList();
   }
 }
